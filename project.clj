@@ -10,6 +10,8 @@
 
                  [enlive "1.1.5"]
                  [hiccup "1.0.4"]
+
+                 [clj-time "0.6.0"]
                  
                  [overtone/at-at "1.2.0"]
 
