@@ -63,7 +63,7 @@
      (fn [a k]
        (let [[i,f]  (k parser)]
          (assoc a k (f (get cells i)))))
-     
+
      {} ks)))
 
 (defn do-parse-rows [parser h-rows]
@@ -81,24 +81,49 @@
         rest ;; Убираем шапку таблицы, берем только тело
         (->->> map #(h/select % [:td]))
         (->->> map (fn [x] (map #(first (% :content)) x)))
+
+        ;; Деструктуризация первой страници
         (->->> do-parse-rows {:keyname [0,str]
-                              :caption [2,#(first (% :content))]
+                              :caption [2, #(first (% :content))]
                               :description [3,str]
                               :sum_all [6, #(bigdec (-> %
                                                         (clojure.string/replace #" " "")
                                                         (clojure.string/replace #"," ".")))]
-                               
+
                               :bdate [8,#(tc/to-sql-date (tf/parse (tf/formatter "dd-MM-yyyy") %)) ]
                               :edate [9,#(tc/to-sql-date (tf/parse (tf/formatter "dd-MM-yyyy") %)) ]
 
-                              :place [10,str]
+                              :place_to [10,str]
+
+                              :TMP_URL [2, #((% :attrs) :href)]
 
                               } )
 
+
+        ;; Далее получаем информацию еще с одной страници по url
+        (->->> map (fn [x]
+                     (merge (dissoc x :TMP_URL) ;; Сливаем результаты и удаляем ненужное :TMP_URL
+                            (-> (h/html-resource (java.net.URL. (x :TMP_URL))) ;; здесь :TMP_URL еще есть
+                                (h/select [:.showtab])
+                                first ;; Берем первую таблицу
+                                (h/select [:td])
+                                rest
+                                (->->> take-nth 2)
+                                (->->> map #(first (% :content)))
+
+                                (->->> get-cell-and-parse {:zak_name [1,str]
+                                                           :org [2,str]
+                                                           :place_in [3,str]
+                                                           :method [4,str]
+                                                           })
+                                ))))
+
         ;; Добавление служебной информации
         (->->> map #(assoc % :url url :res res :updated (tc/to-sql-time (tco/now)) ))
-        
+
+        ;; удобно при отладке
         ;;first
+
         )))
 
 ;;(insert lots (values (tender-sk-kz-lots)))
@@ -113,18 +138,28 @@
        (map (fn [{res :res keyname :keyname  :as row}]
               (let [r (update lots (set-fields row) (where (and (= :res res) (= :keyname keyname))))]
                 (if (nil? r) row nil))))
-       
+
        (filter #(not (nil? %)))
-       
+
        (#(if (empty? %) :only-updated
-            (do (insert lots (values %)) :updated-and-inserted)))))
-              
-
-         
-    
+             (do (insert lots (values %)) :updated-and-inserted)))))
 
 
 
+
+
+;; SHEDULE -----------------------------------------------------------------------------------------
+
+(defn task-fn-1 []
+  (println (insert-update-rows(tender-sk-kz-lots)))
+  )
+
+(def my-pool (at/mk-pool))
+
+(defn run-task1 []
+  (at/every (* 5 60 1000)
+            task-fn-1
+            my-pool))
 
 ;; INIT --------------------------------------------------------------------------------------------
 
@@ -143,7 +178,8 @@
 ;; WEB SERVER --------------------------------------------------------------------------------------
 
 (defroutes app-routes
-  (GET "/" [] "Hello World!")
+  ;;(GET "/" [] "Hello World!!!!!!")
+  (GET "/" [] "<html><head></head><body></body></html>") ;; В таком варианте появляется скрипт для автообновления страници который включается от :auto-refresh? true
   ;;(GET "/" [] (main-page))
 
   (route/resources "/")

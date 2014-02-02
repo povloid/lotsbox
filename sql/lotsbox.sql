@@ -4,7 +4,7 @@
 
 -- Dumped from database version 9.3.2
 -- Dumped by pg_dump version 9.3.2
--- Started on 2014-02-01 21:52:21 ALMT
+-- Started on 2014-02-02 23:35:01 ALMT
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -37,7 +37,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- TOC entry 171 (class 1259 OID 18836)
+-- TOC entry 170 (class 1259 OID 18849)
 -- Name: lots; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -48,17 +48,21 @@ CREATE TABLE lots (
     caption text,
     description text,
     sum_all numeric(19,2),
-    place character varying(512),
+    place_to character varying(512),
     bdate date,
     edate date,
     url text,
     res character varying(20),
-    updated timestamp without time zone
+    updated timestamp without time zone,
+    zak_name text,
+    org text,
+    place_in text,
+    method text
 );
 
 
 --
--- TOC entry 170 (class 1259 OID 18834)
+-- TOC entry 171 (class 1259 OID 18855)
 -- Name: lots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -72,7 +76,7 @@ CREATE SEQUENCE lots_id_seq
 
 --
 -- TOC entry 1983 (class 0 OID 0)
--- Dependencies: 170
+-- Dependencies: 171
 -- Name: lots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -80,7 +84,7 @@ ALTER SEQUENCE lots_id_seq OWNED BY lots.id;
 
 
 --
--- TOC entry 1864 (class 2604 OID 18839)
+-- TOC entry 1864 (class 2604 OID 18857)
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -88,7 +92,7 @@ ALTER TABLE ONLY lots ALTER COLUMN id SET DEFAULT nextval('lots_id_seq'::regclas
 
 
 --
--- TOC entry 1866 (class 2606 OID 18844)
+-- TOC entry 1866 (class 2606 OID 18859)
 -- Name: lots_pk; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -97,7 +101,7 @@ ALTER TABLE ONLY lots
 
 
 --
--- TOC entry 1868 (class 2606 OID 18846)
+-- TOC entry 1868 (class 2606 OID 18861)
 -- Name: lots_uk1; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -105,7 +109,7 @@ ALTER TABLE ONLY lots
     ADD CONSTRAINT lots_uk1 UNIQUE (res, keyname);
 
 
--- Completed on 2014-02-01 21:52:21 ALMT
+-- Completed on 2014-02-02 23:35:02 ALMT
 
 --
 -- PostgreSQL database dump complete
