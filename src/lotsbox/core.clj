@@ -157,7 +157,7 @@
 (def my-pool (at/mk-pool))
 
 (defn run-task1 []
-  (at/every (* 5 60 1000)
+  (at/every (* 15 60 1000)
             task-fn-1
             my-pool))
 
@@ -168,9 +168,167 @@
 
   (print "STARTING SCHEDULLER -> ")
 
+  (run-task1)
+
   (print "[ok]")
 
   )
+
+
+
+;; WEB ---------------------------------------------------------------------------------------------
+
+
+(defn s1 [{qp :params}]
+  (letfn [(select-add [s p w]
+            (if (or (empty? p) (nil? p)) s (w s)))
+
+          (parse-date [p d]
+            (if (or (empty? p) (nil? p)) d
+                (tc/to-sql-date (tf/parse (tf/formatter "yyyy-MM-dd") p))))
+
+          (parse-number [p d]
+            (if (or (empty? p) (nil? p)) nil
+                (bigdec p)))
+
+
+          ]
+
+    (-> (select* lots)
+
+        (select-add (qp :ff-bdate) #(where % (>= :bdate (parse-date (qp :bdate) nil))))
+        (select-add (qp :ff-edate) #(where % (<= :edate (parse-date (qp :edate) nil))))
+
+        (select-add (qp :ff-bsum) #(where % (>= :sum_all (parse-number (qp :bsum) nil))))
+        (select-add (qp :ff-esum) #(where % (<= :sum_all (parse-number (qp :esum) nil))))
+
+        (select-add (qp :limit) #(limit % (parse-number (qp :limit) 100)))
+
+                                        ;(as-sql)
+
+        (exec)
+
+                                        ;(sql-only)
+        
+
+        )))
+
+
+(defn query-form [{qp :params}]
+  (form-to [:get "/"]
+
+           [:hgroup
+            ;;[:h3 "Поиск по лотам"]
+            ]
+
+           [:fieldset
+            [:legend "Параметры поиска:"]
+
+
+
+            (label {} "ff-bdate" "по дате:")
+
+            (check-box {} :ff-bdate (qp :ff-bdate))
+            "от "(text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}"  :placeholder "дата в формате yyyy-MM-dd" } :bdate (qp :bdate))
+
+            (check-box {} :ff-edate (qp :ff-edate))
+            " до " (text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}" :placeholder "дата в формате yyyy-MM-dd" } :edate (qp :edate))
+
+
+
+            (label {} :ff-from-sum "по сумме:")
+
+            (check-box {} :ff-bsum (qp :ff-bsum))
+            "от "(text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :bsum (qp :bsum))
+
+            (check-box {} :ff-esum (qp :ff-esum))
+            " до " (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :esum (qp :esum))
+
+
+            (label {} "limit" "Вывести строк:")
+            (text-field {:type "number" :pattern "\\d+" :placeholder "вывести строк" } :limit (qp :limit))
+
+
+            ]
+
+           (submit-button "Послать запрос")
+
+           ))
+
+
+
+(defn result-table [rows]
+  [:table {:class "tg"}
+   
+   [:tr
+    [:th {:colspan="1" :class="tg-s6z2"} "№" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Наименование" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Описание" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Сумма" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Метод закупки" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Дата нач." ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Дата кон." ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Место поставки" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Место закупки" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Организатор" ]
+    [:th {:colspan="1" :class="tg-s6z2"} "Заказчик"]
+    ]
+   
+   
+   (for [row rows]
+     [:tr
+      [:td (row :keyname)]
+      [:td (row :caption)]
+      [:td (row :description)]
+      [:td (row :sum_all)]
+      [:td (row :method)]
+      [:td (row :bdate)]
+      [:td (row :edate)]
+      [:td (row :place_to)]
+      [:td (row :place_in)]
+      [:td (row :org)]
+      [:td (row :zak_name)]
+      
+      ]
+     
+     )]
+  )
+
+
+
+(def head
+  [:head
+   [:title "Lots Box"]
+   (include-css "/css/custom.css")
+
+   ])
+
+
+(def page-header
+  [:nav ]
+  )
+
+
+(def page-footer
+  [:footer "Подвал!!!"])
+
+
+(defn main-page [request]
+  (html5 head
+         [:body
+          page-header
+
+          (query-form request)
+
+          ;;request
+
+          ;;(result-table (select lots))
+          (result-table (s1 request))
+
+          page-footer
+          ]
+         ))
+
 
 
 
@@ -179,8 +337,13 @@
 
 (defroutes app-routes
   ;;(GET "/" [] "Hello World!!!!!!")
-  (GET "/" [] "<html><head></head><body></body></html>") ;; В таком варианте появляется скрипт для автообновления страници который включается от :auto-refresh? true
+  ;;(GET "/" [] "<html><head></head><body></body></html>") ;; В таком варианте появляется скрипт для автообновления страници который включается от :auto-refresh? true
   ;;(GET "/" [] (main-page))
+
+  ;;(GET "/" [] (str (select lots)))
+
+  (GET "/" request (main-page request))
+
 
   (route/resources "/")
   (route/not-found "Not Found"))
