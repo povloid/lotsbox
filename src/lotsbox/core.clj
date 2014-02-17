@@ -79,9 +79,9 @@
   "Получение данных лотов по адресу http://tender.sk.kz/index.php/ru/lots"
   (let [res  "tender.sk.kz"
         url  (or url "http://tender.sk.kz/index.php/ru/lots")]
-    
+
     (println "RUN PARSING FOR: " res " URL: " url)
-    
+
     (-> (h/html-resource (java.net.URL. url))
         (h/select [:.showtab :tr])
         rest ;; Убираем шапку таблицы, берем только тело
@@ -195,24 +195,24 @@
                             :sorter true
                             }
 
-                           {:text "Наименование" :align "l" :style "width: 60%"
+                           {:text "Наименование" :align "l" :style "width: 55%"
                             :getfn #(vec [:div
                                           [:b (:caption %)]
                                           [:br]
                                           (:description %)
                                           [:hr]
-                                          [:b "Место закупки:"] (:place_in %)
+                                          [:b "Место закупки: "] (:place_in %)
                                           [:br]
-                                          [:b "Место поставки:"] (:place_to %)
+                                          [:b "Место поставки: "] (:place_to %)
                                           [:br]
-                                          [:b "Заказчик:"] (:zak_name %)
+                                          [:b "Заказчик: "] (:zak_name %)
                                           [:br]
-                                          [:b "Организатор:"] (:org %)
+                                          [:b "Организатор: "] (:org %)
                                           [:br]
                                           ])
                             }
 
-                           {:field :sum_all
+                           {:field :sum_all :style "font-size:16px; width: 7%"
                             :text "Сумма" :align "r"
                             :getfn :sum_all
                             :sorter true
@@ -224,13 +224,13 @@
                             :sorter false
                             }
 
-                           {:field :bdate
+                           {:field :bdate 
                             :text "Дата нач." :align "c"
                             :getfn :bdate
                             :sorter true
                             }
 
-                           {:field :edate
+                           {:field :edate 
                             :text "Дата кон." :align "c"
                             :getfn :edate
                             :sorter true
@@ -348,7 +348,6 @@
   [:head
    [:title "Lots Box"]
 
-
    (include-css "/css/flick/jquery-ui-1.10.4.custom.min.css")
 
    (include-css "/css/cssmenu.css")
@@ -370,15 +369,7 @@ $( \"#radioset\" ).buttonset();
 
 $( \"#tabs\" ).tabs();
 
-$('input:text, input:password')
-  .css({
-          'font' : 'inherit',
-         'color' : 'inherit',
-    'text-align' : 'left',
-       'outline' : 'none',
-        'cursor' : 'text'
-  });
-
+$('input').addClass(\"ui-widget\").addClass(\"ui-widget-content\").addClass(\"ui-corner-all\");
 })
 
 "))
