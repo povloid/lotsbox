@@ -75,10 +75,10 @@
 
 ;; tender.sk.kz ------------------------------------------------------------------
 
-(defn tender-sk-kz-lots []
+(defn tender-sk-kz-lots [url]
   "Получение данных лотов по адресу http://tender.sk.kz/index.php/ru/lots"
   (let [res  "tender.sk.kz"
-        url  "http://tender.sk.kz/index.php/ru/lots"]
+        url  (or url "http://tender.sk.kz/index.php/ru/lots")]
     (-> (h/html-resource (java.net.URL. url))
         (h/select [:.showtab :tr])
         rest ;; Убираем шапку таблицы, берем только тело
@@ -151,8 +151,12 @@
 ;; SHEDULE -----------------------------------------------------------------------------------------
 
 (defn task-fn-1 []
-  (println (insert-update-rows(tender-sk-kz-lots)))
-  )
+  (println (insert-update-rows (concat
+                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots")
+                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/10")
+                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/20")
+                                ))))
+
 
 (def my-pool (at/mk-pool))
 
@@ -228,7 +232,7 @@
 
                            ;; {:text "Доп. сведения" :align "l"
                            ;;  :getfn #(vec [:div
-                                          
+
                            ;;                ])
                            ;;  }
 
@@ -268,7 +272,7 @@
             (check-box {} :ff-bsum (qp :ff-bsum))
             (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :bsum (qp :bsum))
 
-            " до" 
+            " до"
             (check-box {} :ff-esum (qp :ff-esum))
             (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :esum (qp :esum))
 
@@ -284,12 +288,12 @@
             [:br]
             [:br]
             (submit-button "Послать запрос")
-            
+
             ]
 
 
-           (println (str "%" (qp :liketext) "%"))
-           
+           ;;(println (str "%" (qp :liketext) "%"))
+
            (cw/html-table-with-page-sort request
                                          (cw/items-do-fn table-lots
                                                          (fn [select-lots]
@@ -318,7 +322,7 @@
                                                                                                              (like :description (str "%" (qp :liketext) "%"))
 
                                                                                                              )))
-                                                                 
+
                                                                  )))
 
                                                          )
