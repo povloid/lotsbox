@@ -79,6 +79,9 @@
   "Получение данных лотов по адресу http://tender.sk.kz/index.php/ru/lots"
   (let [res  "tender.sk.kz"
         url  (or url "http://tender.sk.kz/index.php/ru/lots")]
+    
+    (println "RUN PARSING FOR: " res " URL: " url)
+    
     (-> (h/html-resource (java.net.URL. url))
         (h/select [:.showtab :tr])
         rest ;; Убираем шапку таблицы, берем только тело
@@ -151,11 +154,14 @@
 ;; SHEDULE -----------------------------------------------------------------------------------------
 
 (defn task-fn-1 []
-  (println (insert-update-rows (concat
-                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots")
-                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/10")
-                                (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/20")
-                                ))))
+  ;; Разделил на 3 для разруливания дубликатов при инсертах в начала страниц"
+  (println (insert-update-rows (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots")))
+  (println (insert-update-rows (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/10")))
+  (println (insert-update-rows (tender-sk-kz-lots "http://tender.sk.kz/index.php/ru/lots/20")))
+  )
+
+
+
 
 
 (def my-pool (at/mk-pool))
@@ -356,13 +362,23 @@
 
 $(function() {
 
-        $( \"#accordion\" ).accordion();
+$( \"#accordion\" ).accordion();
 
-        $( \"input[type=submit], input[type=button], button\" ).button();
+$( \"input[type=submit], input[type=button], button\" ).button();
 
-        $( \"#radioset\" ).buttonset();
+$( \"#radioset\" ).buttonset();
 
-        $( \"#tabs\" ).tabs();
+$( \"#tabs\" ).tabs();
+
+$('input:text, input:password')
+  .css({
+          'font' : 'inherit',
+         'color' : 'inherit',
+    'text-align' : 'left',
+       'outline' : 'none',
+        'cursor' : 'text'
+  });
+
 })
 
 "))
