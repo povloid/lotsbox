@@ -22,6 +22,9 @@
             [clj-time.core :as tco]
             [clj-time.format :as tf]
             [clj-time.coerce :as tc]
+
+            [actus.common-web :as cw]
+
             )
   )
 
@@ -128,8 +131,9 @@
 
 ;;(insert lots (values (tender-sk-kz-lots)))
 
-
 ;; tender.sk.kz ...
+
+
 
 
 (defn insert-update-rows [rows]
@@ -143,10 +147,6 @@
 
        (#(if (empty? %) :only-updated
              (do (insert lots (values %)) :updated-and-inserted)))))
-
-
-
-
 
 ;; SHEDULE -----------------------------------------------------------------------------------------
 
@@ -174,135 +174,196 @@
 
   )
 
-
-
 ;; WEB ---------------------------------------------------------------------------------------------
 
+(def table-lots {:name :news
+                 :columns [
+                           {:field :keyname
+                            :text "№"
+                            :align "r" :style "font-size:16px; width: 7%"
+                            :getfn :keyname
+                            :sorter true
+                            }
 
-(defn s1 [{qp :params}]
-  (letfn [(select-add [s p w]
-            (if (or (empty? p) (nil? p)) s (w s)))
+                           {:text "Наименование" :align "l" :style "width: 60%"
+                            :getfn #(vec [:div
+                                          [:b (:caption %)]
+                                          [:br]
+                                          (:description %)
+                                          [:hr]
+                                          [:b "Место закупки:"] (:place_in %)
+                                          [:br]
+                                          [:b "Место поставки:"] (:place_to %)
+                                          [:br]
+                                          [:b "Заказчик:"] (:zak_name %)
+                                          [:br]
+                                          [:b "Организатор:"] (:org %)
+                                          [:br]
+                                          ])
+                            }
 
-          (parse-date [p d]
-            (if (or (empty? p) (nil? p)) d
-                (tc/to-sql-date (tf/parse (tf/formatter "yyyy-MM-dd") p))))
+                           {:field :sum_all
+                            :text "Сумма" :align "r"
+                            :getfn :sum_all
+                            :sorter true
+                            }
 
-          (parse-number [p d]
-            (if (or (empty? p) (nil? p)) nil
-                (bigdec p)))
+                           {:field :method
+                            :text "Метод" :align "l"
+                            :getfn :method
+                            :sorter false
+                            }
+
+                           {:field :bdate
+                            :text "Дата нач." :align "c"
+                            :getfn :bdate
+                            :sorter true
+                            }
+
+                           {:field :edate
+                            :text "Дата кон." :align "c"
+                            :getfn :edate
+                            :sorter true
+                            }
+
+                           ;; {:text "Доп. сведения" :align "l"
+                           ;;  :getfn #(vec [:div
+                                          
+                           ;;                ])
+                           ;;  }
+
+                           ]
+
+                 :items (select* lots)
+                 })
 
 
-          ]
-
-    (-> (select* lots)
-
-        (select-add (qp :ff-bdate) #(where % (>= :bdate (parse-date (qp :bdate) nil))))
-        (select-add (qp :ff-edate) #(where % (<= :edate (parse-date (qp :edate) nil))))
-
-        (select-add (qp :ff-bsum) #(where % (>= :sum_all (parse-number (qp :bsum) nil))))
-        (select-add (qp :ff-esum) #(where % (<= :sum_all (parse-number (qp :esum) nil))))
-
-        (select-add (qp :limit) #(limit % (parse-number (qp :limit) 100)))
-
-                                        ;(as-sql)
-
-        (exec)
-
-                                        ;(sql-only)
-        
-
-        )))
-
-
-(defn query-form [{qp :params}]
+(defn query-form [{qp :params :as request}]
   (form-to [:get "/"]
 
            [:hgroup
             ;;[:h3 "Поиск по лотам"]
             ]
 
-           [:fieldset
-            [:legend "Параметры поиска:"]
+           [:fieldset {:class "ui-widget ui-widget-content"}
+            [:legend "Параметры поиска:" ]
 
 
 
             (label {} "ff-bdate" "по дате:")
 
+            " от"
             (check-box {} :ff-bdate (qp :ff-bdate))
-            "от "(text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}"  :placeholder "дата в формате yyyy-MM-dd" } :bdate (qp :bdate))
+            (text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}"  :placeholder "дата в формате yyyy-MM-dd" } :bdate (qp :bdate))
 
+            " до"
             (check-box {} :ff-edate (qp :ff-edate))
-            " до " (text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}" :placeholder "дата в формате yyyy-MM-dd" } :edate (qp :edate))
+            (text-field {:type "date" :pattern "\\d{4}-\\d{2}-\\d{2}" :placeholder "дата в формате yyyy-MM-dd" } :edate (qp :edate))
 
 
 
-            (label {} :ff-from-sum "по сумме:")
+            (label {} :ff-bsum "по сумме:")
 
+            " от"
             (check-box {} :ff-bsum (qp :ff-bsum))
-            "от "(text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :bsum (qp :bsum))
+            (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :bsum (qp :bsum))
 
+            " до" 
             (check-box {} :ff-esum (qp :ff-esum))
-            " до " (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :esum (qp :esum))
+            (text-field {:type "number" :pattern "\\d+(\\.\\d{2})?" :placeholder "сумма" } :esum (qp :esum))
 
 
-            (label {} "limit" "Вывести строк:")
-            (text-field {:type "number" :pattern "\\d+" :placeholder "вывести строк" } :limit (qp :limit))
+            ;;            (label {} "limit" "Вывести строк:")
+            ;;            (text-field {:type "number" :pattern "\\d+" :placeholder "вывести строк" } :limit (qp :limit))
 
+            [:br]
+            (label {} :ff-liketext "Текст в названии и описании ")
+            (check-box {} :ff-liketext (qp :ff-liketext))
+            (text-field {:type "text" :placeholder "слово" } :liketext (qp :liketext))
 
+            [:br]
+            [:br]
+            (submit-button "Послать запрос")
+            
             ]
 
-           (submit-button "Послать запрос")
+
+           (println (str "%" (qp :liketext) "%"))
+           
+           (cw/html-table-with-page-sort request
+                                         (cw/items-do-fn table-lots
+                                                         (fn [select-lots]
+
+                                                           (letfn [(select-add [s p w]
+                                                                     (if (or (empty? p) (nil? p)) s (w s)))
+
+                                                                   (parse-date [p d]
+                                                                     (if (or (empty? p) (nil? p)) d
+                                                                         (tc/to-sql-date (tf/parse (tf/formatter "yyyy-MM-dd") p))))
+
+                                                                   (parse-number [p d]
+                                                                     (if (or (empty? p) (nil? p)) nil
+                                                                         (bigdec p)))
+                                                                   ]
+
+                                                             (-> select-lots
+
+                                                                 (select-add (qp :ff-bdate) #(where % (>= :bdate (parse-date (qp :bdate) nil))))
+                                                                 (select-add (qp :ff-edate) #(where % (<= :edate (parse-date (qp :edate) nil))))
+
+                                                                 (select-add (qp :ff-bsum) #(where % (>= :sum_all (parse-number (qp :bsum) nil))))
+                                                                 (select-add (qp :ff-esum) #(where % (<= :sum_all (parse-number (qp :esum) nil))))
+
+                                                                 (select-add (qp :ff-liketext) #(where % (or (like :caption (str "%" (qp :liketext) "%"))
+                                                                                                             (like :description (str "%" (qp :liketext) "%"))
+
+                                                                                                             )))
+                                                                 
+                                                                 )))
+
+                                                         )
+                                         :0)
 
            ))
 
 
-
-(defn result-table [rows]
-  [:table {:class "tg"}
-   
-   [:tr
-    [:th {:colspan="1" :class="tg-s6z2"} "№" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Наименование" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Описание" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Сумма" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Метод закупки" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Дата нач." ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Дата кон." ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Место поставки" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Место закупки" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Организатор" ]
-    [:th {:colspan="1" :class="tg-s6z2"} "Заказчик"]
-    ]
-   
-   
-   (for [row rows]
-     [:tr
-      [:td (row :keyname)]
-      [:td (row :caption)]
-      [:td (row :description)]
-      [:td (row :sum_all)]
-      [:td (row :method)]
-      [:td (row :bdate)]
-      [:td (row :edate)]
-      [:td (row :place_to)]
-      [:td (row :place_in)]
-      [:td (row :org)]
-      [:td (row :zak_name)]
-      
-      ]
-     
-     )]
-  )
-
+(defn js-text-compressor [text]
+  (-> text
+      (clojure.string/replace #"\n" " ")
+      (clojure.string/replace #"\s+" " ")
+      ))
 
 
 (def head
   [:head
    [:title "Lots Box"]
+
+
+   (include-css "/css/flick/jquery-ui-1.10.4.custom.min.css")
+
+   (include-css "/css/cssmenu.css")
+   (include-css "/css/table.css")
    (include-css "/css/custom.css")
 
-   ])
+   (include-js  "/js/jquery-2.1.0.min.js")
+   (include-js  "/js/jquery-ui-1.10.4.custom.min.js")
 
+   (javascript-tag (js-text-compressor "
+
+$(function() {
+
+        $( \"#accordion\" ).accordion();
+
+        $( \"input[type=submit], input[type=button], button\" ).button();
+
+        $( \"#radioset\" ).buttonset();
+
+        $( \"#tabs\" ).tabs();
+})
+
+"))
+
+   ])
 
 (def page-header
   [:nav ]
@@ -316,20 +377,19 @@
 (defn main-page [request]
   (html5 head
          [:body
-          page-header
+          ;;page-header
 
           (query-form request)
+
 
           ;;request
 
           ;;(result-table (select lots))
-          (result-table (s1 request))
+          ;;(result-table (s1 request))
 
           page-footer
           ]
          ))
-
-
 
 
 
